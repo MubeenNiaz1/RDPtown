@@ -5,33 +5,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Desktop and RDP
+      - name: Install Desktop and Force-Display
         run: |
           sudo apt update
-          # Install XFCE and XRDP
-          sudo apt install -y xfce4 xfce4-goodies xrdp
+          # Install Desktop, RDP, and a virtual display buffer
+          sudo apt install -y xfce4 xfce4-goodies xrdp xserver-xorg-video-dummy
           
-          # Set password for the correct 'runner' user
+          # Set the password
           echo "runner:Zorin123" | sudo chpasswd
           
-          # Configure session and permissions
-          echo xfce4-session > ~/.xsession
-          sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
+          # Force the session to use XFCE
+          echo "xfce4-session" > ~/.xsession
           
-          # Start service and wait for it to settle
+          # RELAX SECURITY: Allow any user and disable encryption requirements that crash Remmina
+          sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
+          sudo sed -i 's/crypto_level=high/crypto_level=low/' /etc/xrdp/xrdp.ini
+          
           sudo systemctl enable xrdp
           sudo service xrdp restart
-          sleep 10
 
-      - name: Setup Cloudflare Tunnel
+      - name: Setup Cloudflare
         run: |
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
-          # Use TCP mode to avoid the 'Help' menu loop
+          # Force TCP tunnel
           cloudflared tunnel --url tcp://localhost:3389 &
 
-      - name: Keep Alive (6 Hours)
+      - name: Keep Alive
         run: sleep 21600
