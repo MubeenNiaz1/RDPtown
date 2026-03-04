@@ -11,21 +11,26 @@ jobs:
       - name: Install Desktop and RDP
         run: |
           sudo apt update
-          # Install XFCE Desktop and XRDP Server (The "GUI")
+          # Install XFCE and XRDP
           sudo apt install -y xfce4 xfce4-goodies xrdp
-          # Set the password for the 'runner' user to 'Zorin123'
-          echo "$USER:Zorin123" | sudo chpasswd
+          
+          # Set password for the correct 'runner' user
+          echo "runner:Zorin123" | sudo chpasswd
+          
+          # Configure session and permissions
           echo xfce4-session > ~/.xsession
+          sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
+          
+          # Start service and wait for it to settle
           sudo systemctl enable xrdp
-          sudo service xrdp start
+          sudo service xrdp restart
+          sleep 10
 
       - name: Setup Cloudflare Tunnel
         run: |
-          # Download and install Cloudflared
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
-          # Start the tunnel specifically for the RDP port (3389)
-          # We use --url tcp://... to prevent the 'Help' menu error
+          # Use TCP mode to avoid the 'Help' menu loop
           cloudflared tunnel --url tcp://localhost:3389 &
 
       - name: Keep Alive (6 Hours)
