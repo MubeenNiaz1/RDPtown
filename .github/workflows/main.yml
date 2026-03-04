@@ -1,0 +1,26 @@
+name: FreeRDP-Zorin
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Desktop and RDP
+        run: |
+          sudo apt update
+          # Install a lightweight desktop (XFCE) and RDP server (XRDP)
+          sudo apt install -y xfce4 xfce4-goodies xrdp
+          echo xfce4-session > ~/.xsession
+          sudo systemctl enable xrdp
+          sudo service xrdp start
+          # Set the password for 'runneradmin' to 'Zorin123'
+          echo "runneradmin:Zorin123" | sudo chpasswd
+      - name: Setup Cloudflare
+        run: |
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+          # Creates the tunnel link for RDP port 3389
+          cloudflared tunnel --url tcp://localhost:3389 --token ${{ secrets.CLOUDFLARE_AUTH_TOKEN }} &
+      - name: Keep Alive
+        run: sleep 21600
